@@ -1,0 +1,19 @@
+{
+  "name": "flex-market-account-api",
+  "version": "1.0.0",
+  "description": "account-api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daegkim/flex-market-account-api.git"
+  },
+  "author": "daegkim",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daegkim/flex-market-account-api/issues"
+  },
+  "homepage": "https://github.com/daegkim/flex-market-account-api#readme"
+}
