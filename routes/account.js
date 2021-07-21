@@ -113,10 +113,6 @@ router.post('/change_point', async function (req, res, next) {
     var isSuccessChangeAccount = await changeAccount(userId, changeData, "CHARGE_POINT", session);
 
     if (isSuccessChangeAccount) {
-      await session.commitTransaction();
-      session.endSession();
-      manageSession.deleteSession(sessionId);
-
       const afterUserInfo = await accountSchema.findAccount(userId);
 
       result.isSuccess = true;
@@ -124,12 +120,6 @@ router.post('/change_point', async function (req, res, next) {
       result.afterUserInfo = afterUserInfo;
     }
     else {
-      if (session !== null && session.inTransaction()) {
-        await session.abortTransaction();
-        session.endSession();
-        manageSession.deleteSession(sessionId);
-      }
-
       result.isSuccess = false;
       result.reason = '해당 계정을 찾지 못했습니다.';
       result.afterUserInfo = null;
@@ -137,11 +127,6 @@ router.post('/change_point', async function (req, res, next) {
     res.send(result);
   }
   catch (err) {
-    if (session !== null && session.inTransaction()) {
-      await session.abortTransaction();
-      session.endSession();
-      manageSession.deleteSession(sessionId);
-    }
     result.isSuccess = false;
     result.reason = "고객센터에 문의하세요.";
     result.afterUserInfo = null;
@@ -150,8 +135,32 @@ router.post('/change_point', async function (req, res, next) {
   }
 });
 
-router.post('/use_point', async function(req, res, next) {
-  
+router.post('/commit_session', async function(req, res, next) {
+  var session = null;
+  try {
+    var result = {
+      isSuccess: true
+    }
+    var sessionId = req.body.sessionId;
+    session = manageSession.getSession(sessionId);
+
+    if(session !== null && session.inTransaction()){
+      await session.commitTransaction();
+      session.endSession();
+    }
+    manageSession.deleteSession(sessionId);
+    res.send(result);
+  }
+  catch(err) {
+    if (session !== null && session.inTransaction()) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+    manageSession.deleteSession(sessionId);
+
+    result.isSuccess = false;
+    res.send(result);
+  }
 })
 
 module.exports = router;
