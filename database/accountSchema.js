@@ -18,14 +18,17 @@ accountSchema.statics.findAccount = async function (userId, session) {
     result = await this.findOne({ userId: userId }).session(session).exec();
   }
 
-  const userInfo = {
-    userId: result.userId,
-    userName: result.userName,
-    point: result.point,
-    favoriteProductId: result.favoriteProductId
-  };
-
-  return userInfo;
+  if(result === undefined || result === null){
+    return null;
+  }
+  else{
+    return {
+      userId: result.userId,
+      userName: result.userName,
+      point: result.point,
+      favoriteProductId: result.favoriteProductId
+    }
+  }
 }
 
 accountSchema.statics.login = async function (userId, userPwd) {
