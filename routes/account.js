@@ -90,13 +90,13 @@ router.post('/change_point', async function (req, res, next) {
     };
 
     //Validations
-    if (changeData === undefined || changeData === null) {
+    if (isNullOrEmpty(changeData)) {
       result.reason = "변경하려는 값이 입력되지 않았습니다.";
       res.send(result);
       return;
     }
 
-    if (userId === undefined || userId === null || userId === '') {
+    if (isNullOrEmpty(userId)) {
       result.reason = "변경하려는 값이 입력되지 않았습니다.";
       res.send(result);
       return;
@@ -158,6 +158,28 @@ router.post('/commit_session', async function(req, res, next) {
     }
     manageSession.deleteSession(sessionId);
 
+    result.isSuccess = false;
+    res.send(result);
+  }
+})
+
+router.post('/rollback_session', async function(req, res, next) {
+  var session = null;
+  try {
+    var result = {
+      isSuccess: true
+    }
+    var sessionId = req.body.sessionId;
+    session = manageSession.getSession(sessionId);
+
+    if(session !== null && session.inTransaction()){
+      await session.abortTransaction();
+      session.endSession();
+    }
+    manageSession.deleteSession(sessionId);
+    res.send(result);
+  }
+  catch(err) {
     result.isSuccess = false;
     res.send(result);
   }
