@@ -14,7 +14,14 @@ const isNullOrEmpty = (str) => {
   }
   return result;
 }
-
+/**
+ * 
+ * @param {string} userId 
+ * @param {{point: number}} changeData 
+ * @param {string} actId 
+ * @param {number} session 
+ * @returns 
+ */
 const changeAccount = async (userId, changeData, actId, session) => {
   const prevProcessedData = {};
   const prevData = await accountSchema.findAccount(userId, session);
@@ -85,7 +92,6 @@ router.post('/change_point', async function (req, res, next) {
     var result = {
       isSuccess: false,
       reason: "고객센터에 문의하세요.",
-      afterUserInfo: null,
       sessionId: sessionId
     };
 
@@ -113,23 +119,18 @@ router.post('/change_point', async function (req, res, next) {
     var isSuccessChangeAccount = await changeAccount(userId, changeData, "CHARGE_POINT", session);
 
     if (isSuccessChangeAccount) {
-      const afterUserInfo = await accountSchema.findAccount(userId);
-
       result.isSuccess = true;
       result.reason = null;
-      result.afterUserInfo = afterUserInfo;
     }
     else {
       result.isSuccess = false;
       result.reason = '해당 계정을 찾지 못했습니다.';
-      result.afterUserInfo = null;
     }
     res.send(result);
   }
   catch (err) {
     result.isSuccess = false;
     result.reason = "고객센터에 문의하세요.";
-    result.afterUserInfo = null;
 
     res.send(result);
   }
@@ -137,11 +138,13 @@ router.post('/change_point', async function (req, res, next) {
 
 router.post('/commit_session', async function(req, res, next) {
   var session = null;
+  var result = {
+    isSuccess: false,
+    userInfo: null
+  }
   try {
-    var result = {
-      isSuccess: true
-    }
     var sessionId = req.body.sessionId;
+    var userId = req.body.userId;
     session = manageSession.getSession(sessionId);
 
     if(session !== null && session.inTransaction()){
@@ -149,6 +152,12 @@ router.post('/commit_session', async function(req, res, next) {
       session.endSession();
     }
     manageSession.deleteSession(sessionId);
+
+    const userInfo = await accountSchema.findAccount(userId);
+
+    result.isSuccess = true;
+    result.userInfo = userInfo;
+
     res.send(result);
   }
   catch(err) {
@@ -159,6 +168,7 @@ router.post('/commit_session', async function(req, res, next) {
     manageSession.deleteSession(sessionId);
 
     result.isSuccess = false;
+    result.userInfo = null;
     res.send(result);
   }
 })
