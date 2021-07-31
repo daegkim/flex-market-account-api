@@ -14,6 +14,7 @@ const isNullOrEmpty = (str) => {
   }
   return result;
 }
+
 /**
  * 
  * @param {string} userId 
@@ -46,19 +47,71 @@ const changeAccount = async (userId, changeData, actId, session) => {
   return true;
 }
 
+/**
+ * 
+ * @param {string} userId 
+ * @returns {{isSuccess: boolean, reason: string, userInfo: {userId: string, userName: string, point: number, favoriteProductId: number[]}}}
+ */
+const getUserInfo = async(userId) => {
+  const result = {
+    isSuccess: false,
+    reason: "Please contact the customer service center.",
+    userInfo: null
+  }
+
+  try{
+    const userInfo = await accountSchema.findAccount(userId);
+    result.isSuccess = true;
+    result.reason = null;
+    result.userInfo = userInfo
+  }
+  catch(err){
+    result.isSuccess = false;
+    result.reason = "Please contact the customer service center.";
+  }
+  finally{
+    return result;
+  }
+}
+
+router.post('/userInfo', async function(req, res, next) {
+  const result = {
+    isSuccess: false,
+    reason: "Please contact the customer service center.",
+    userInfo: null
+  }
+
+  try{
+    const userId = req.body.userId;
+    const userInfoData = await getUserInfo(userId);
+    Object.keys(result).forEach((key) => {
+      result[key] = userInfoData[key];
+    });
+  }
+  catch(err){
+    console.log(err);
+    result.isSuccess = false;
+    result.reason = "Please contact the customer service center.";
+  }
+  finally{
+    res.send(result);
+  }
+
+})
+
 router.post('/login', async function (req, res, next) {
+  const result = {
+    isSuccess: false,
+    reason: "Please contact the customer service center.",
+    userInfo: null
+  };
+
   try {
     const userId = req.body.userId;
     const userPwd = req.body.userPwd;
-    var result = {
-      isSuccess: false,
-      reason: "Please contact the customer service center.",
-      userInfo: null
-    };
 
     if (isNullOrEmpty(userId) || isNullOrEmpty(userPwd)) {
       result.reason = "Please enter your ID and password.";
-      res.send(result);
     }
     else {
       const derivedUserPwd = crypto.pbkdf2Sync(userPwd, 'salt', 100000, 64, 'sha512').toString('hex');
@@ -71,13 +124,14 @@ router.post('/login', async function (req, res, next) {
       else {
         result.reason = "Please check your ID and password.";
       }
-      res.send(result);
     }
   }
   catch (err) {
     result.isSuccess = false;
-    result.reason = '고객센터에 문의하세요.';
+    result.reason = 'Please contact the customer service center.';
     result.userInfo = null;
+  }
+  finally {
     res.send(result);
   }
 });
@@ -138,26 +192,21 @@ router.post('/change_point', async function (req, res, next) {
 
 router.post('/commit_session', async function(req, res, next) {
   var session = null;
-  var result = {
-    isSuccess: false,
-    userInfo: null
+  const result = {
+    isSuccess: false
   }
+  
   try {
     var sessionId = req.body.sessionId;
-    var userId = req.body.userId;
-    session = manageSession.getSession(sessionId);
 
+    session = manageSession.getSession(sessionId);
     if(session !== null && session.inTransaction()){
       await session.commitTransaction();
       session.endSession();
     }
     manageSession.deleteSession(sessionId);
 
-    const userInfo = await accountSchema.findAccount(userId);
-
     result.isSuccess = true;
-    result.userInfo = userInfo;
-
     res.send(result);
   }
   catch(err) {
@@ -168,25 +217,27 @@ router.post('/commit_session', async function(req, res, next) {
     manageSession.deleteSession(sessionId);
 
     result.isSuccess = false;
-    result.userInfo = null;
     res.send(result);
   }
 })
 
 router.post('/rollback_session', async function(req, res, next) {
   var session = null;
-  try {
-    var result = {
-      isSuccess: true
-    }
-    var sessionId = req.body.sessionId;
-    session = manageSession.getSession(sessionId);
+  const result = {
+    isSuccess: false
+  }
 
+  try {
+    var sessionId = req.body.sessionId;
+
+    session = manageSession.getSession(sessionId);
     if(session !== null && session.inTransaction()){
       await session.abortTransaction();
       session.endSession();
     }
     manageSession.deleteSession(sessionId);
+
+    result.isSuccess = true;
     res.send(result);
   }
   catch(err) {
